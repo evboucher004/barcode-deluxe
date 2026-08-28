@@ -148,97 +148,112 @@ class _ResultScreenState extends State<ResultScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your barcode')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Above the barcode: picking a type then seeing the result reads
-            // top to bottom. The detected type is marked in the list, which
-            // is the only place that label now appears.
-            DropdownButtonFormField<String>(
-              value: _selectedLabel,
-              decoration: const InputDecoration(
-                labelText: 'Barcode type',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final label in options)
-                  DropdownMenuItem(
-                    value: label,
-                    child: Text(label == _detected.label
-                        ? '$label (detected)'
-                        : label),
+      body: GestureDetector(
+        // Tapping any empty part of the body dismisses the keyboard. The
+        // dropdown, the barcode, the buttons and the text field still
+        // receive their own taps: they sit deeper in the tree and win the
+        // gesture arena.
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        // Fill the body. The Scaffold passes loose constraints and the
+        // scroll view shrink-wraps its content, so without this the hit
+        // area would stop where the content ends, leaving a dead strip
+        // along the bottom — the same trap the home screen fell into.
+        child: SizedBox.expand(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Above the barcode: picking a type then seeing the
+                // result reads top to bottom. The detected type is marked
+                // in the list, which is the only place that label appears.
+                DropdownButtonFormField<String>(
+                  value: _selectedLabel,
+                  decoration: const InputDecoration(
+                    labelText: 'Barcode type',
+                    border: OutlineInputBorder(),
                   ),
-              ],
-              onChanged: (v) => setState(() => _selectedLabel = v!),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Screenshot(
-                  controller: _screenshot,
-                  child: Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.all(16),
-                    child: BarcodeWidget(
-                      barcode: _barcode,
-                      data: _text,
-                      height: 180,
-                      errorBuilder: (context, error) => Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          'Cannot encode with $_selectedLabel:\n$error',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.red),
+                  items: [
+                    for (final label in options)
+                      DropdownMenuItem(
+                        value: label,
+                        child: Text(label == _detected.label
+                            ? '$label (detected)'
+                            : label),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _selectedLabel = v!),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Screenshot(
+                      controller: _screenshot,
+                      child: Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                        child: BarcodeWidget(
+                          barcode: _barcode,
+                          data: _text,
+                          height: 180,
+                          errorBuilder: (context, error) => Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Text(
+                              'Cannot encode with $_selectedLabel:\n$error',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: const InputDecoration(
-                      labelText: 'Encoded text',
-                      border: OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.done,
-                    // Enter does the same thing as the button beside it.
-                    onSubmitted: (_) => _refresh(),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Scan new text'),
+                  onPressed: _scanNew,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _textController,
+                  decoration: const InputDecoration(
+                    labelText: 'Encoded text',
+                    border: OutlineInputBorder(),
                   ),
+                  textInputAction: TextInputAction.done,
+                  // Enter does the same thing as Regenerate below.
+                  onSubmitted: (_) => _refresh(),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  // Disabled while the box matches the barcode on screen.
-                  onPressed: _canRefresh ? _refresh : null,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Regenerate from this text',
-                ),
-                const SizedBox(width: 8),
-                // Same constructor as Refresh, so the two match in size
-                // without pinning any dimensions. Icon only: the tooltip
-                // carries the label that used to sit beside it.
-                IconButton.filled(
-                  onPressed: _save,
-                  icon: const Icon(Icons.download),
-                  tooltip: 'Save as image',
+                const SizedBox(height: 16),
+                // Both wrapped in Expanded, so they split the row evenly and
+                // stay the same size as each other whatever the labels are.
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        // Disabled while the box matches the barcode above.
+                        onPressed: _canRefresh ? _refresh : null,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Regenerate'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _save,
+                        icon: const Icon(Icons.download),
+                        label: const Text('Download'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Scan new text with barcode'),
-              onPressed: _scanNew,
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -15,19 +15,23 @@ The barcode type is auto-detected from the content, with a manual override dropd
 
 ## Result screen
 
-The encoded text sits in an editable box with two icon buttons beside it:
-**Refresh** and, to its right, **Save as image**, which writes the rendered
-barcode to the photo gallery. Both are icon-only and the same size.
-Editing the box and pressing Refresh (or Enter) re-encodes with the new value:
-detection runs again, so the symbology can change, and any manual override
-from the dropdown is dropped along with the content it belonged to. The button
-is disabled whenever the box already matches the barcode on screen, so it can
-never redraw what is already there — surrounding whitespace, and an emptied
-box, do not count as a change.
+Top to bottom: the **Barcode type** dropdown, the barcode itself, **Scan new
+text**, the editable encoded-text box, and a last row of **Regenerate** and
+**Download**. The two share that row evenly, so they are always the same size.
+Download writes the rendered barcode to the photo gallery.
+
+Editing the box and pressing Regenerate (or Enter in the box) re-encodes with
+the new value: detection runs again, so the symbology can change, and any
+manual override from the dropdown is dropped along with the content it
+belonged to. Regenerate is disabled whenever the box already matches the
+barcode on screen, so it can never redraw what is already there — surrounding
+whitespace, and an emptied box, do not count as a change.
 
 The box holds the *encoded* string, so an edit made here is taken literally:
-the Advanced Options are not re-applied to it. Refreshing records the new
+the Advanced Options are not re-applied to it. Regenerating records the new
 string in the recent inputs like any other barcode.
+
+Tapping any empty part of the screen dismisses the keyboard.
 
 ## Recent inputs
 

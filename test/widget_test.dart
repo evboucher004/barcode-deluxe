@@ -939,8 +939,8 @@ void main() {
     /// Whether the Refresh button beside the encoded-text box is enabled.
     bool refreshEnabled(WidgetTester tester) =>
         tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.refresh),
+            .widget<FilledButton>(
+              find.widgetWithIcon(FilledButton, Icons.refresh),
             )
             .onPressed !=
         null;
@@ -1093,21 +1093,60 @@ void main() {
       expect(refreshEnabled(tester), isFalse);
     });
 
-    testWidgets('the save button sits beside refresh and matches its size',
+    testWidgets('tapping outside the encoded-text box unfocuses it',
         (WidgetTester tester) async {
       await tester.pumpWidget(wrap('HELLO123'));
       await tester.pumpAndSettle();
 
-      final save = find.widgetWithIcon(IconButton, Icons.download);
-      final refresh = find.widgetWithIcon(IconButton, Icons.refresh);
+      bool hasFocus() => tester
+          .widget<EditableText>(find.byType(EditableText))
+          .focusNode
+          .hasFocus;
 
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(hasFocus(), isTrue);
+
+      // x = 12 is inside the body's 24px padding, so it is empty at any
+      // height: the stretched column starts at x = 24.
+      await tester.tapAt(const Offset(12, 300));
+      await tester.pumpAndSettle();
+      expect(hasFocus(), isFalse);
+    });
+
+    testWidgets('the tap-to-dismiss area reaches the bottom of the body',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(wrap('HELLO123'));
+      await tester.pumpAndSettle();
+
+      // Same shrink-wrapping trap as the home screen: without an expanded
+      // body the hit area would stop where the content ends.
+      expect(
+        tester.getRect(find.byType(SingleChildScrollView)).bottom,
+        tester.getRect(find.byType(Scaffold)).bottom,
+      );
+    });
+
+    testWidgets('Regenerate and Download share the last row evenly',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(wrap('HELLO123'));
+      await tester.pumpAndSettle();
+
+      final refresh = find.widgetWithIcon(FilledButton, Icons.refresh);
+      final save = find.widgetWithIcon(FilledButton, Icons.download);
+
+      expect(find.text('Regenerate'), findsOneWidget);
+      expect(find.text('Download'), findsOneWidget);
+
+      // Same size, Download to the right of Regenerate, on one row.
       expect(tester.getSize(save), tester.getSize(refresh));
-      // To the right of it, on the same row.
       expect(tester.getTopLeft(save).dx,
           greaterThan(tester.getTopLeft(refresh).dx));
       expect(tester.getCenter(save).dy, tester.getCenter(refresh).dy);
-      // Icon only now.
-      expect(find.text('Save as Image'), findsNothing);
+
+      // Below the encoded-text box, which is now the full width on its own.
+      expect(tester.getTopLeft(refresh).dy,
+          greaterThan(tester.getBottomLeft(find.byType(TextField)).dy));
     });
 
     testWidgets('a refreshed barcode is recorded in the history',
