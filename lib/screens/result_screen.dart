@@ -153,6 +153,27 @@ class _ResultScreenState extends State<ResultScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Above the barcode: picking a type then seeing the result reads
+            // top to bottom. The detected type is marked in the list, which
+            // is the only place that label now appears.
+            DropdownButtonFormField<String>(
+              value: _selectedLabel,
+              decoration: const InputDecoration(
+                labelText: 'Barcode type',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final label in options)
+                  DropdownMenuItem(
+                    value: label,
+                    child: Text(label == _detected.label
+                        ? '$label (detected)'
+                        : label),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _selectedLabel = v!),
+            ),
+            const SizedBox(height: 16),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -200,37 +221,18 @@ class _ResultScreenState extends State<ResultScreen> {
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Regenerate from this text',
                 ),
+                const SizedBox(width: 8),
+                // Same constructor as Refresh, so the two match in size
+                // without pinning any dimensions. Icon only: the tooltip
+                // carries the label that used to sit beside it.
+                IconButton.filled(
+                  onPressed: _save,
+                  icon: const Icon(Icons.download),
+                  tooltip: 'Save as image',
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text('Auto-detected: ${_detected.label}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedLabel,
-              decoration: const InputDecoration(
-                labelText: 'Barcode type',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final label in options)
-                  DropdownMenuItem(
-                    value: label,
-                    child: Text(label == _detected.label
-                        ? '$label (detected)'
-                        : label),
-                  ),
-              ],
-              onChanged: (v) => setState(() => _selectedLabel = v!),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              icon: const Icon(Icons.download),
-              label: const Text('Save as Image'),
-              onPressed: _save,
-            ),
-            const SizedBox(height: 8),
             OutlinedButton.icon(
               icon: const Icon(Icons.camera_alt),
               label: const Text('Scan new text with barcode'),

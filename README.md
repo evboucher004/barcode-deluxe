@@ -15,7 +15,9 @@ The barcode type is auto-detected from the content, with a manual override dropd
 
 ## Result screen
 
-The encoded text sits in an editable box with a **Refresh** button beside it.
+The encoded text sits in an editable box with two icon buttons beside it:
+**Refresh** and, to its right, **Save as image**, which writes the rendered
+barcode to the photo gallery. Both are icon-only and the same size.
 Editing the box and pressing Refresh (or Enter) re-encodes with the new value:
 detection runs again, so the symbology can change, and any manual override
 from the dropdown is dropped along with the content it belonged to. The button

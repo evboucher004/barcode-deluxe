@@ -584,7 +584,7 @@ void main() {
       // Stripped to 8 digits with a valid EAN-8 checksum, so stripping also
       // changes which symbology is detected.
       expect(encodedText(tester), '96385074');
-      expect(find.text('Auto-detected: EAN-8'), findsOneWidget);
+      expect(find.text('EAN-8 (detected)'), findsOneWidget);
     });
 
     testWidgets('Alphanumeric only alone does not remove spaces',
@@ -926,6 +926,16 @@ void main() {
     Widget wrap(String text) =>
         MaterialApp(home: ResultScreen(text: text));
 
+    /// The payload of the rendered barcode.
+    ///
+    /// BarcodeWidget stores [BarcodeWidget.data] as bytes, not as the String
+    /// it was constructed with.
+    String barcodeData(WidgetTester tester) {
+      final data =
+          tester.widget<BarcodeWidget>(find.byType(BarcodeWidget)).data;
+      return data is String ? data : String.fromCharCodes(data as List<int>);
+    }
+
     /// Whether the Refresh button beside the encoded-text box is enabled.
     bool refreshEnabled(WidgetTester tester) =>
         tester
@@ -940,7 +950,6 @@ void main() {
       await tester.pumpWidget(wrap('9780306406157'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Auto-detected: EAN-13 (ISBN)'), findsOneWidget);
       expect(find.text('EAN-13 (ISBN) (detected)'), findsOneWidget);
     });
 
@@ -972,8 +981,11 @@ void main() {
         tester.widget<BarcodeWidget>(find.byType(BarcodeWidget)).barcode.name,
         Barcode.code39().name,
       );
-      // The auto-detection label is unchanged by a manual override.
-      expect(find.text('Auto-detected: Code 128'), findsOneWidget);
+      // The override does not change what was detected: reopening the list
+      // still marks Code 128 as the detected type.
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      expect(find.text('Code 128 (detected)'), findsWidgets);
     });
 
     testWidgets('an unencodable override renders the error builder',
@@ -1028,18 +1040,15 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(wrap('HELLO-123'));
       await tester.pumpAndSettle();
-      expect(find.text('Auto-detected: Code 128'), findsOneWidget);
+      expect(find.text('Code 128 (detected)'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), '9780306406157');
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.refresh));
       await tester.pumpAndSettle();
 
-      expect(
-        tester.widget<BarcodeWidget>(find.byType(BarcodeWidget)).data,
-        '9780306406157',
-      );
-      expect(find.text('Auto-detected: EAN-13 (ISBN)'), findsOneWidget);
+      expect(barcodeData(tester), '9780306406157');
+      expect(find.text('EAN-13 (ISBN) (detected)'), findsOneWidget);
       // Nothing left to regenerate.
       expect(refreshEnabled(tester), isFalse);
     });
@@ -1082,6 +1091,23 @@ void main() {
 
       expect(encodedText(tester), 'WORLD456');
       expect(refreshEnabled(tester), isFalse);
+    });
+
+    testWidgets('the save button sits beside refresh and matches its size',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(wrap('HELLO123'));
+      await tester.pumpAndSettle();
+
+      final save = find.widgetWithIcon(IconButton, Icons.download);
+      final refresh = find.widgetWithIcon(IconButton, Icons.refresh);
+
+      expect(tester.getSize(save), tester.getSize(refresh));
+      // To the right of it, on the same row.
+      expect(tester.getTopLeft(save).dx,
+          greaterThan(tester.getTopLeft(refresh).dx));
+      expect(tester.getCenter(save).dy, tester.getCenter(refresh).dy);
+      // Icon only now.
+      expect(find.text('Save as Image'), findsNothing);
     });
 
     testWidgets('a refreshed barcode is recorded in the history',
