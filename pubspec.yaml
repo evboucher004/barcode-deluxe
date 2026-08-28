@@ -1,0 +1,31 @@
+name: barcode_gen
+description: Auto-detecting barcode generator with text and camera (OCR) input.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # barcode is imported directly by lib/barcode_detector.dart (Barcode.ean13()
+  # etc.), so it is declared explicitly rather than relied on transitively
+  # through barcode_widget.
+  barcode: ^2.2.9
+  barcode_widget: ^2.0.4
+  camera: ^0.11.0+2
+  image: ^4.2.0
+  google_mlkit_text_recognition: ^0.13.1
+  gal: ^2.3.0
+  screenshot: ^3.0.0
+  path_provider: ^2.1.4
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
