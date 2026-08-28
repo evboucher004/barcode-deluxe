@@ -283,75 +283,127 @@ void main() {
         WidgetTester tester, String text) async {
       await tester.enterText(find.byType(TextField), text);
       await tester.pumpAndSettle();
-      // enterText focuses the field, which pops the recent list over the
-      // Generate button once there is history. Unfocus first so the tap below
-      // reaches the button.
-      await tester.tapAt(const Offset(400, 580));
-      await tester.pumpAndSettle();
-
       await tester.tap(find.text('Generate barcode'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
     }
 
-    /// Clears the field, which also focuses it.
-    Future<void> focusEmptyField(WidgetTester tester) async {
+    /// Empties the text box. find.text matches EditableText as well as Text,
+    /// so a string left in the field would double-count against the panel.
+    Future<void> clearField(WidgetTester tester) async {
       await tester.enterText(find.byType(TextField), '');
       await tester.pumpAndSettle();
     }
+
+    /// The History button beside Generate.
+    Finder historyButton() =>
+        find.widgetWithIcon(OutlinedButton, Icons.history);
+
+    /// Presses it.
+    Future<void> pressHistory(WidgetTester tester) async {
+      await tester.tap(historyButton());
+      await tester.pumpAndSettle();
+    }
+
+    /// The entries listed in the panel. Scoped to the panel, because the
+    /// History button shows the same icon.
+    Finder recentEntries() => find.descendant(
+          of: find.byKey(const ValueKey('recent-inputs-panel')),
+          matching: find.byIcon(Icons.history),
+        );
 
     testWidgets('nothing appears when there is no history',
         (WidgetTester tester) async {
       await tester.pumpWidget(const BarcodeGenApp());
 
-      await focusEmptyField(tester);
-
-      expect(find.byIcon(Icons.history), findsNothing);
+      // Nothing to list, so the button is disabled.
+      expect(tester.widget<OutlinedButton>(historyButton()).onPressed, isNull);
+      expect(recentEntries(), findsNothing);
     });
 
-    testWidgets('focusing the field reveals previously encoded strings',
+    testWidgets('History sits to the right of Generate, icon only',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(const BarcodeGenApp());
+
+      final generate = find.widgetWithText(FilledButton, 'Generate barcode');
+      expect(tester.getTopLeft(historyButton()).dx,
+          greaterThan(tester.getTopLeft(generate).dx));
+      expect(tester.getCenter(historyButton()).dy,
+          tester.getCenter(generate).dy);
+      // The icon is the whole label.
+      expect(
+        find.descendant(of: historyButton(), matching: find.byType(Text)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('focusing the field no longer opens the list',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(const BarcodeGenApp());
+      await generateAndReturn(tester, 'HELLO123');
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      expect(recentEntries(), findsNothing);
+    });
+
+    testWidgets('the History button reveals previously encoded strings',
         (WidgetTester tester) async {
       await tester.pumpWidget(const BarcodeGenApp());
       await generateAndReturn(tester, 'HELLO123');
       await generateAndReturn(tester, 'WORLD456');
 
-      await focusEmptyField(tester);
+      await clearField(tester);
+      await pressHistory(tester);
 
       // Newest first.
-      expect(find.byIcon(Icons.history), findsNWidgets(2));
+      expect(recentEntries(), findsNWidgets(2));
       expect(find.text('WORLD456'), findsOneWidget);
       expect(find.text('HELLO123'), findsOneWidget);
     });
 
-    testWidgets('the list hides again when the field loses focus',
+    testWidgets('pressing History again hides the list',
         (WidgetTester tester) async {
       await tester.pumpWidget(const BarcodeGenApp());
       await generateAndReturn(tester, 'HELLO123');
 
-      await focusEmptyField(tester);
-      expect(find.byIcon(Icons.history), findsOneWidget);
+      await pressHistory(tester);
+      expect(recentEntries(), findsOneWidget);
 
-      // Tap empty space to unfocus.
+      await pressHistory(tester);
+      expect(recentEntries(), findsNothing);
+    });
+
+    testWidgets('tapping empty space closes the list',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(const BarcodeGenApp());
+      await generateAndReturn(tester, 'HELLO123');
+
+      await pressHistory(tester);
+      expect(recentEntries(), findsOneWidget);
+
       await tester.tapAt(const Offset(400, 580));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.history), findsNothing);
+      expect(recentEntries(), findsNothing);
     });
 
-    testWidgets('tapping an entry pastes it into the textbox',
+    testWidgets('tapping an entry pastes it and closes the list',
         (WidgetTester tester) async {
       await tester.pumpWidget(const BarcodeGenApp());
       await generateAndReturn(tester, 'HELLO123');
 
-      await focusEmptyField(tester);
+      await clearField(tester);
+      await pressHistory(tester);
       await tester.tap(find.text('HELLO123'));
       await tester.pumpAndSettle();
 
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.controller!.text, 'HELLO123');
-      // Pasting must not steal focus, so the list stays up.
-      expect(field.focusNode!.hasFocus, isTrue);
+      // It is a picker: the choice closes it.
+      expect(recentEntries(), findsNothing);
     });
 
     testWidgets('at most five entries are shown',
@@ -361,9 +413,10 @@ void main() {
         await generateAndReturn(tester, s);
       }
 
-      await focusEmptyField(tester);
+      await clearField(tester);
+      await pressHistory(tester);
 
-      expect(find.byIcon(Icons.history), findsNWidgets(5));
+      expect(recentEntries(), findsNWidgets(5));
       // Oldest has fallen off, newest is present.
       expect(find.text('AAA1'), findsNothing);
       expect(find.text('BBB2'), findsOneWidget);
@@ -376,7 +429,8 @@ void main() {
       // Defaults strip punctuation and spaces.
       await generateAndReturn(tester, 'AB-12 cd');
 
-      await focusEmptyField(tester);
+      await clearField(tester);
+      await pressHistory(tester);
 
       expect(find.text('AB12cd'), findsOneWidget);
       expect(find.text('AB-12 cd'), findsNothing);
@@ -386,8 +440,6 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(const BarcodeGenApp());
       await tester.enterText(find.byType(TextField), 'HELLO123');
-      await tester.pumpAndSettle();
-      await tester.tapAt(const Offset(400, 580));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Generate barcode'));
       await tester.pumpAndSettle();
@@ -402,11 +454,12 @@ void main() {
 
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await focusEmptyField(tester);
+      await clearField(tester);
+      await pressHistory(tester);
 
       // Both are listed, newest first, even though the second one never
       // passed through the home screen.
-      expect(find.byIcon(Icons.history), findsNWidgets(2));
+      expect(recentEntries(), findsNWidgets(2));
       expect(find.text('SCANNED9'), findsOneWidget);
       expect(find.text('HELLO123'), findsOneWidget);
     });
@@ -928,13 +981,11 @@ void main() {
 
     /// The payload of the rendered barcode.
     ///
-    /// BarcodeWidget stores [BarcodeWidget.data] as bytes, not as the String
-    /// it was constructed with.
-    String barcodeData(WidgetTester tester) {
-      final data =
-          tester.widget<BarcodeWidget>(find.byType(BarcodeWidget)).data;
-      return data is String ? data : String.fromCharCodes(data as List<int>);
-    }
+    /// BarcodeWidget normalises [BarcodeWidget.data] to a List<int> in its
+    /// constructor, so it never holds the String it was given.
+    String barcodeData(WidgetTester tester) => String.fromCharCodes(
+          tester.widget<BarcodeWidget>(find.byType(BarcodeWidget)).data,
+        );
 
     /// Whether the Refresh button beside the encoded-text box is enabled.
     bool refreshEnabled(WidgetTester tester) =>

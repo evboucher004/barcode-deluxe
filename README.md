@@ -35,10 +35,14 @@ Tapping any empty part of the screen dismisses the keyboard.
 
 ## Recent inputs
 
-Focusing the text box on the home screen shows the last five strings that were
-actually encoded, newest first. Tapping one pastes it into the box, leaving the
-field focused. Re-encoding a string moves it back to the front rather than
-duplicating it.
+The **History** button beside *Generate barcode* — icon only — lists the last
+five strings that were actually encoded, newest first. It is disabled until
+there is something to list. Tapping an entry pastes it into the text box and
+closes the list; pressing History again, tapping empty space, or opening
+Advanced Options also closes it. Re-encoding a string moves it back to the
+front rather than duplicating it.
+
+Focusing the text box does not open the list.
 
 What is stored is the *encoded* string, i.e. after the Advanced Options have
 been applied, so tapping an entry reproduces exactly the barcode you saw. The
@@ -50,9 +54,10 @@ Everything that becomes a barcode is recorded, including a scan started from
 without returning through the home screen, so the home screen tracks
 `RecentInputsStore.listenable` rather than only the entries it records itself.
 
-Like the Advanced Options panel it renders into the app `Overlay`, so showing
-it costs no layout space and the buttons beneath never move. It does float
-over them while visible; the keyboard's Done key still generates.
+Like the Advanced Options panel it renders into the app `Overlay`, anchored
+under the text box, so showing it costs no layout space and the buttons
+beneath never move — it does float over them while visible. Opening it drops
+keyboard focus, so the two never compete for the same space.
 
 ## Advanced options
 

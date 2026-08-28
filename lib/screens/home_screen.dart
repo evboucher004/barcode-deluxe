@@ -42,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(_syncRecentPanel);
     // The result screen can scan again and record entries without coming back
     // through this screen, so track the store itself rather than only what
     // passes through [_showResult].
@@ -52,27 +51,31 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     RecentInputsStore.listenable.removeListener(_refreshRecent);
-    _focusNode.removeListener(_syncRecentPanel);
     _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  /// Re-reads the store into [_recent] and shows or hides the panel to match.
+  /// Re-reads the store into [_recent], closing the panel if the history it
+  /// is showing has gone away.
   void _refreshRecent() {
     if (!mounted) return;
     setState(() => _recent = RecentInputsStore.value);
-    _syncRecentPanel();
+    if (_recent.isEmpty) _hideRecentPanel();
   }
 
-  /// The list is shown only while the field has focus and there is history.
-  void _syncRecentPanel() {
-    final shouldShow = _focusNode.hasFocus && _recent.isNotEmpty;
-    if (shouldShow && !_recentPortal.isShowing) {
-      _recentPortal.show();
-    } else if (!shouldShow && _recentPortal.isShowing) {
-      _recentPortal.hide();
-    }
+  /// Opens or closes the recent-inputs panel. Driven only by the History
+  /// button, which is disabled while there is nothing to show.
+  void _toggleRecentPanel() {
+    if (_recent.isEmpty) return;
+    // The panel drops down over the buttons, so get the keyboard out of the
+    // way rather than have the two fight for the same space.
+    _focusNode.unfocus();
+    _recentPortal.toggle();
+  }
+
+  void _hideRecentPanel() {
+    if (_recentPortal.isShowing) _recentPortal.hide();
   }
 
   void _generate(String raw) {
@@ -84,9 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Funnel for both paths that start on this screen. Recording here is not
   /// the only way an entry is added — see the listener in [initState].
   void _showResult(String encoded) {
-    // Drop focus before navigating. The list lives in the app Overlay, which
-    // sits above every route, so leaving it open would float it over the
-    // result screen.
+    // The panel lives in the app Overlay, which sits above every route, so
+    // leaving it open would float it over the result screen.
+    _hideRecentPanel();
     _focusNode.unfocus();
 
     // Updates the cache synchronously and notifies [_refreshRecent].
@@ -97,12 +100,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Pastes a history entry into the field, leaving it focused.
+  /// Pastes a history entry into the field and closes the panel: it is a
+  /// picker, and the choice has been made.
   void _useRecent(String entry) {
     _controller.value = TextEditingValue(
       text: entry,
       selection: TextSelection.collapsed(offset: entry.length),
     );
+    _hideRecentPanel();
   }
 
   Widget _buildRecentPanel(double? width) {
@@ -116,6 +121,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Align(
           alignment: Alignment.topLeft,
           child: Material(
+            // Named so tests can tell panel entries apart from the History
+            // button, which carries the same icon.
+            key: const ValueKey('recent-inputs-panel'),
             elevation: 3,
             borderRadius: BorderRadius.circular(12),
             clipBehavior: Clip.antiAlias,
@@ -124,8 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 for (final entry in _recent)
                   InkWell(
-                    // Must not take focus, or pasting would close the keyboard
-                    // and dismiss this very list.
+                    // Nothing in the panel should take focus; it is a picker
+                    // that writes into the field it sits under.
                     canRequestFocus: false,
                     onTap: () => _useRecent(entry),
                     child: Padding(
@@ -188,7 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
       // tree and win the gesture arena.
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => FocusScope.of(context).unfocus(),
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _hideRecentPanel();
+        },
         child: LayoutBuilder(
           builder: (context, constraints) {
             // Centring the content in the viewport and then reserving 2x the
@@ -243,10 +254,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       // 16 original gap + 20 added spacer.
                       const SizedBox(height: 36),
-                      FilledButton.icon(
-                        icon: const Icon(Icons.qr_code_2),
-                        label: const Text('Generate barcode'),
-                        onPressed: () => _generate(_controller.text),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              icon: const Icon(Icons.qr_code_2),
+                              label: const Text('Generate barcode'),
+                              onPressed: () => _generate(_controller.text),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Icon-only, and outlined so the primary action
+                          // beside it stays the emphasised one. Disabled
+                          // until there is something to list.
+                          OutlinedButton(
+                            onPressed:
+                                _recent.isEmpty ? null : _toggleRecentPanel,
+                            child: const Icon(Icons.history),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
@@ -262,10 +288,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         key: ValueKey(_optionsEpoch),
                         initialValue: _options,
                         onChanged: (v) => setState(() => _options = v),
-                        // Dismiss the keyboard on open or close, so it cannot
-                        // sit over the panel that drops down beneath.
-                        onExpansionChanged: (_) =>
-                            FocusScope.of(context).unfocus(),
+                        // Dismiss the keyboard, and the history panel, on open
+                        // or close: neither should sit over the panel that
+                        // drops down beneath.
+                        onExpansionChanged: (_) {
+                          FocusScope.of(context).unfocus();
+                          _hideRecentPanel();
+                        },
                       ),
                     ],
                   ),
