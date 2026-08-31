@@ -13,51 +13,21 @@ The barcode type is auto-detected from the content, with a manual override dropd
 6. Printable ASCII up to 48 chars -> Code 128
 7. Everything else (URLs, long text, unicode) -> QR code
 
-## Result screen
+## Barcode Screen
 
-Top to bottom: the **Barcode type** dropdown, the barcode itself, **Scan new
-text**, the editable encoded-text box, and a last row of **Regenerate** and
-**Download**. The two share that row evenly, so they are always the same size.
-Download writes the rendered barcode to the photo gallery.
+Displays the **Barcode type** used, in a dropdown, alongside the barcode itself. This screen includes a few other elements. **Scan new
+text** switches to the camera, the editable encoded-text box allows the user to edit the text in the barcode, **Regenerate** will use the
+changed text to generate a new barcode, and **Download** which saves the barcode in the device's gallery. 
 
 Editing the box and pressing Regenerate (or Enter in the box) re-encodes with
 the new value: detection runs again, so the symbology can change, and any
 manual override from the dropdown is dropped along with the content it
-belonged to. Regenerate is disabled whenever the box already matches the
-barcode on screen, so it can never redraw what is already there — surrounding
-whitespace, and an emptied box, do not count as a change.
-
-The box holds the *encoded* string, so an edit made here is taken literally:
-the Advanced Options are not re-applied to it. Regenerating records the new
-string in the recent inputs like any other barcode.
-
-Tapping any empty part of the screen dismisses the keyboard.
+belonged to.
 
 ## Recent inputs
 
-The **History** button beside *Generate barcode* — icon only — lists the last
-five strings that were actually encoded, newest first. It is disabled until
-there is something to list. Tapping an entry pastes it into the text box and
-closes the list; pressing History again, tapping empty space, or opening
-Advanced Options also closes it. Re-encoding a string moves it back to the
-front rather than duplicating it.
-
-Focusing the text box does not open the list.
-
-What is stored is the *encoded* string, i.e. after the Advanced Options have
-been applied, so tapping an entry reproduces exactly the barcode you saw. The
-list is saved to `shared_preferences` and reloaded in `main()`, so it survives
-a restart.
-
-Everything that becomes a barcode is recorded, including a scan started from
-**Scan new text** on the result screen. That path replaces the result route
-without returning through the home screen, so the home screen tracks
-`RecentInputsStore.listenable` rather than only the entries it records itself.
-
-Like the Advanced Options panel it renders into the app `Overlay`, anchored
-under the text box, so showing it costs no layout space and the buttons
-beneath never move — it does float over them while visible. Opening it drops
-keyboard focus, so the two never compete for the same space.
+The **History** button beside *Generate barcode* lists the last
+five strings that were generated into barcodes.
 
 ## Advanced options
 
