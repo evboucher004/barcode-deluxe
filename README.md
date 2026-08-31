@@ -16,7 +16,7 @@ The barcode type is auto-detected from the content, with a manual override dropd
 ## Barcode Screen
 
 Displays the **Barcode type** used, in a dropdown, alongside the barcode itself. This screen includes a few other elements. **Scan new
-text** switches to the camera, the editable encoded-text box allows the user to edit the text in the barcode, **Regenerate** will use the
+text** switches to the camera, the editable encoded-text box allows the user to edit the barcode's text, **Regenerate** will use the
 changed text to generate a new barcode, and **Download** which saves the barcode in the device's gallery. 
 
 Editing the box and pressing Regenerate (or Enter in the box) re-encodes with
