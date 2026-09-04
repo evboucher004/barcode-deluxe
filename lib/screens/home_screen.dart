@@ -34,6 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   /// the toggles. Seeded from the persisted value loaded at startup.
   var _options = AdvancedOptionsStore.value;
 
+  /// Whether the box has anything in it, so the clear button can come and go.
+  bool _hasText = false;
+
   /// Bumped to force the options panel to re-seed itself from [_options].
   /// Only changes when the scan screen may have edited the shared settings, so
   /// toggling a checkbox here does not rebuild (and therefore close) the panel.
@@ -42,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_syncClearButton);
     // The result screen can scan again and record entries without coming back
     // through this screen, so track the store itself rather than only what
     // passes through [_showResult].
@@ -51,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     RecentInputsStore.listenable.removeListener(_refreshRecent);
+    _controller.removeListener(_syncClearButton);
     _focusNode.dispose();
     _controller.dispose();
     super.dispose();
@@ -62,6 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => _recent = RecentInputsStore.value);
     if (_recent.isEmpty) _hideRecentPanel();
+  }
+
+  /// Rebuilds only when the box crosses between empty and non-empty, so
+  /// typing does not rebuild the screen on every keystroke.
+  void _syncClearButton() {
+    final hasText = _controller.text.isNotEmpty;
+    if (hasText != _hasText) setState(() => _hasText = hasText);
   }
 
   /// Opens or closes the recent-inputs panel. Driven only by the History
@@ -241,9 +253,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: TextField(
                                 controller: _controller,
                                 focusNode: _focusNode,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: 'Enter text to encode',
-                                  border: OutlineInputBorder(),
+                                  border: const OutlineInputBorder(),
+                                  // Only while there is something to clear.
+                                  suffixIcon: _hasText
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear),
+                                          tooltip: 'Clear',
+                                          onPressed: _controller.clear,
+                                        )
+                                      : null,
                                 ),
                                 textInputAction: TextInputAction.done,
                                 onSubmitted: _generate,

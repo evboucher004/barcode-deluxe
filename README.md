@@ -20,6 +20,9 @@ text**, the editable encoded-text box, and a last row of **Regenerate** and
 **Download**. The two share that row evenly, so they are always the same size.
 Download writes the rendered barcode to the photo gallery.
 
+Both this box and the one on the home screen carry a clear (×) button on
+their right edge, which appears only while there is something to clear.
+
 Editing the box and pressing Regenerate (or Enter in the box) re-encodes with
 the new value: detection runs again, so the symbology can change, and any
 manual override from the dropdown is dropped along with the content it

@@ -30,6 +30,9 @@ class _ResultScreenState extends State<ResultScreen> {
   /// Whether the box holds something new that is worth re-encoding.
   bool _canRefresh = false;
 
+  /// Whether the box has anything in it, so the clear button can come and go.
+  bool _hasText = false;
+
   late String _selectedLabel;
   late DetectionResult _detected;
 
@@ -37,6 +40,7 @@ class _ResultScreenState extends State<ResultScreen> {
   void initState() {
     super.initState();
     _text = widget.text;
+    _hasText = _text.isNotEmpty;
     _textController = TextEditingController(text: _text)
       ..addListener(_onTextChanged);
     _applyDetection();
@@ -56,8 +60,12 @@ class _ResultScreenState extends State<ResultScreen> {
   /// does not re-render the barcode on every keystroke.
   void _onTextChanged() {
     final canRefresh = _pendingText.isNotEmpty && _pendingText != _text;
-    if (canRefresh != _canRefresh) {
-      setState(() => _canRefresh = canRefresh);
+    final hasText = _textController.text.isNotEmpty;
+    if (canRefresh != _canRefresh || hasText != _hasText) {
+      setState(() {
+        _canRefresh = canRefresh;
+        _hasText = hasText;
+      });
     }
   }
 
@@ -220,9 +228,17 @@ class _ResultScreenState extends State<ResultScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _textController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Encoded text',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    // Only while there is something to clear.
+                    suffixIcon: _hasText
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            tooltip: 'Clear',
+                            onPressed: _textController.clear,
+                          )
+                        : null,
                   ),
                   textInputAction: TextInputAction.done,
                   // Enter does the same thing as Regenerate below.

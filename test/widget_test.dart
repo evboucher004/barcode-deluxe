@@ -169,6 +169,25 @@ void main() {
       expect(find.byType(ResultScreen), findsOneWidget);
     });
 
+    testWidgets('the clear button empties the box, then goes away',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(const BarcodeGenApp());
+
+      // Nothing to clear yet.
+      expect(find.byIcon(Icons.clear), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'HELLO123');
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.clear), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.clear));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, isEmpty);
+      expect(find.byIcon(Icons.clear), findsNothing);
+    });
+
     testWidgets('Alphanumeric only is on by default, so punctuation is dropped',
         (WidgetTester tester) async {
       await tester.pumpWidget(const BarcodeGenApp());
@@ -1198,6 +1217,25 @@ void main() {
       // Below the encoded-text box, which is now the full width on its own.
       expect(tester.getTopLeft(refresh).dy,
           greaterThan(tester.getBottomLeft(find.byType(TextField)).dy));
+    });
+
+    testWidgets('the clear button empties the encoded-text box',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(wrap('HELLO123'));
+      await tester.pumpAndSettle();
+
+      // The box opens holding the encoded string, so it starts out clearable.
+      expect(find.byIcon(Icons.clear), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.clear));
+      await tester.pumpAndSettle();
+
+      expect(encodedText(tester), isEmpty);
+      expect(find.byIcon(Icons.clear), findsNothing);
+      // An empty box is not something to regenerate.
+      expect(refreshEnabled(tester), isFalse);
+      // ...and the barcode on screen is untouched until Regenerate is used.
+      expect(barcodeData(tester), 'HELLO123');
     });
 
     testWidgets('a refreshed barcode is recorded in the history',
